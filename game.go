@@ -13,8 +13,11 @@ type WordleResponse struct {
 	Solution string `json:"solution"`
 }
 
+var (
+	epoch = time.Date(2021, 6, 19, 0, 0, 0, 0, time.UTC)
+)
+
 func getFallbackWord() string {
-	epoch := time.Date(2021, 6, 19, 0, 0, 0, 0, time.UTC)
 	today := time.Now().UTC()
 	days := int(today.Sub(epoch).Hours() / 24)
 	index := days % len(words.Words)
@@ -85,4 +88,10 @@ func checkGuess(answer, guess string) []string {
 	}
 
 	return result
+}
+
+func getWordleNumber() int {
+	today := time.Now().UTC()
+	days := int(today.Sub(epoch).Hours() / 24)
+	return days
 }

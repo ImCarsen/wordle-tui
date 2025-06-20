@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 	"wordle-tui/game"
 	"wordle-tui/words"
 
+	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -68,9 +70,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
+		case tea.KeyEsc:
 			m.state.SaveState()
 			return m, tea.Quit
+		case tea.KeyCtrlC:
+			if m.state.Daily && m.state.Over {
+				m.message = "Copied to clipboard!"
+				clipboard.WriteAll(m.shareGrid())
+				return m, nil
+			}
+			return m, nil
 		case tea.KeyEnter:
 			if len(m.input) != len(m.state.Answer) {
 				m.message = "Not enough letters"
@@ -215,12 +224,20 @@ func (m model) View() string {
 		// Add share grid
 		b.WriteString("\n\n")
 		b.WriteString(m.shareGrid())
-	} else {
-		b.WriteString("\n\nType your guess and press Enter. Ctrl+C or Esc to quit.")
+	}
+
+	if m.message != "" && !m.state.Over {
+		b.WriteString("\n")
+		b.WriteString(messageStyle.Render(m.message))
 	}
 
 	b.WriteString("\n\n")
-	b.WriteString(keybindStyle.Render("ENTER: submit • BACKSPACE: delete • ESC/CTRL+C: quit"))
+
+	if m.state.Daily && m.state.Over {
+		b.WriteString(keybindStyle.Render("ENTER: submit • BACKSPACE: delete • CTRL+C: copy to clipboard • ESC: quit"))
+	} else {
+		b.WriteString(keybindStyle.Render("ENTER: submit • BACKSPACE: delete • ESC: quit"))
+	}
 
 	content := b.String()
 
@@ -232,6 +249,8 @@ func (m model) View() string {
 func (m model) shareGrid() string {
 	var sb strings.Builder
 
+	num := fmt.Sprint(len(m.state.Guesses))
+	sb.WriteString("Wordle " + fmt.Sprint(getWordleNumber()) + " " + num + "/6\n\n")
 	// Build a string for each guess row
 	for _, fb := range m.state.Feedback {
 		for _, res := range fb {
